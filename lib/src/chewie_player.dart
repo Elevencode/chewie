@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:developer';
 
 import 'package:chewie/src/chewie_progress_colors.dart';
 import 'package:chewie/src/extensions/video_player_controller_extension.dart';
@@ -87,12 +86,11 @@ class ChewieState extends State<Chewie> {
 
   @override
   Widget build(BuildContext context) {
-    log('build');
-    return ChewieControllerProvider(
-      controller: widget.controller,
-      child: ChangeNotifierProvider<PlayerNotifier>.value(
-        value: notifier,
-        builder: (context, w) => const PlayerWithControls(),
+    return ChangeNotifierProvider<PlayerNotifier>.value(
+      value: notifier,
+      builder: (context, w) => ChewieControllerProvider(
+        controller: widget.controller,
+        child: const PlayerWithControls(),
       ),
     );
   }
@@ -668,17 +666,23 @@ class ChewieController extends ChangeNotifier {
 
     final position = await videoPlayerController.position;
     final dataSource = resolutions[resolution];
-    videoPlayerController.dispose();
+    _isFullScreen = !_isFullScreen;
+
+    // if(_isFullScreen) {
+
+    //   exitFullScreen();
+    // }
+    videoPlayerController
+      ..removeListener(_fullScreenListener)
+      ..dispose();
 
     videoPlayerController = videoPlayerController.copyWith(dataSource: dataSource);
 
     await videoPlayerController.initialize();
+    _initialize();
 
-    await _initialize();
     await videoPlayerController.seekTo(position!);
-
     videoPlayerController.play();
-    notifyListeners();
   }
 }
 

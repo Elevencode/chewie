@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:developer';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -15,7 +14,6 @@ import 'package:chewie/src/models/subtitle_model.dart';
 import 'package:chewie/src/notifiers/index.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 
@@ -61,8 +59,6 @@ class _CupertinoControlsState extends State<CupertinoControls> with SingleTicker
   void initState() {
     super.initState();
     notifier = Provider.of<PlayerNotifier>(context, listen: false);
-    // _selectedQuality =
-    //     chewieController.resolutions.isNotEmpty ? chewieController.resolutions.keys.first : '';
   }
 
   @override
@@ -560,18 +556,12 @@ class _CupertinoControlsState extends State<CupertinoControls> with SingleTicker
         );
 
         if (chosenQuality != null) {
-          notifier.selectedResolution = chosenQuality;
           await chewieController.setResolution(chosenQuality);
+          notifier.selectedResolution = chosenQuality;
         }
         if (_latestValue.isPlaying) {
           _startHideTimer();
         }
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            setState(() {});
-            log('state setted');
-          }
-        });
       },
       child: Container(
         height: barHeight,

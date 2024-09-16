@@ -47,14 +47,9 @@ class _ChewieDemoState extends State<ChewieDemo> {
   ];
 
   Future<void> initializePlayer() async {
-    _videoPlayerController1 =
-        VideoPlayerController.networkUrl(Uri.parse(srcs[currPlayIndex]));
-    _videoPlayerController2 =
-        VideoPlayerController.networkUrl(Uri.parse(srcs[currPlayIndex]));
-    await Future.wait([
-      _videoPlayerController1.initialize(),
-      _videoPlayerController2.initialize()
-    ]);
+    _videoPlayerController1 = VideoPlayerController.networkUrl(Uri.parse(srcs[currPlayIndex]));
+    _videoPlayerController2 = VideoPlayerController.networkUrl(Uri.parse(srcs[currPlayIndex]));
+    await Future.wait([_videoPlayerController1.initialize(), _videoPlayerController2.initialize()]);
     _createChewieController();
     setState(() {});
   }
@@ -109,12 +104,19 @@ class _ChewieDemoState extends State<ChewieDemo> {
       ),
     ];
 
+    final resolutions = {
+      '1080p':
+          'https://assets.mixkit.co/videos/preview/mixkit-spinning-around-the-earth-29351-large.mp4',
+      '720p':
+          'https://assets.mixkit.co/videos/preview/mixkit-daytime-city-traffic-aerial-view-56-large.mp4',
+    };
+
     _chewieController = ChewieController(
       videoPlayerController: _videoPlayerController1,
+      resolutions: resolutions,
       autoPlay: true,
       looping: true,
-      progressIndicatorDelay:
-          bufferDelay != null ? Duration(milliseconds: bufferDelay!) : null,
+      progressIndicatorDelay: bufferDelay != null ? Duration(milliseconds: bufferDelay!) : null,
 
       additionalOptions: (context) {
         return <OptionItem>[
@@ -183,8 +185,7 @@ class _ChewieDemoState extends State<ChewieDemo> {
             Expanded(
               child: Center(
                 child: _chewieController != null &&
-                        _chewieController!
-                            .videoPlayerController.value.isInitialized
+                        _chewieController!.videoPlayerController.value.isInitialized
                     ? Chewie(
                         controller: _chewieController!,
                       )
@@ -314,8 +315,7 @@ class _ChewieDemoState extends State<ChewieDemo> {
               ListTile(
                 title: const Text("Delay"),
                 subtitle: DelaySlider(
-                  delay:
-                      _chewieController?.progressIndicatorDelay?.inMilliseconds,
+                  delay: _chewieController?.progressIndicatorDelay?.inMilliseconds,
                   onSave: (delay) async {
                     if (delay != null) {
                       bufferDelay = delay == 0 ? null : delay;

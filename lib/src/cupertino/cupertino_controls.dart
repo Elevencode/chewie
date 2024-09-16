@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -14,6 +15,7 @@ import 'package:chewie/src/models/subtitle_model.dart';
 import 'package:chewie/src/notifiers/index.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 
@@ -35,8 +37,7 @@ class CupertinoControls extends StatefulWidget {
   }
 }
 
-class _CupertinoControlsState extends State<CupertinoControls>
-    with SingleTickerProviderStateMixin {
+class _CupertinoControlsState extends State<CupertinoControls> with SingleTickerProviderStateMixin {
   late PlayerNotifier notifier;
   late VideoPlayerValue _latestValue;
   double? _latestVolume;
@@ -60,6 +61,8 @@ class _CupertinoControlsState extends State<CupertinoControls>
   void initState() {
     super.initState();
     notifier = Provider.of<PlayerNotifier>(context, listen: false);
+    // _selectedQuality =
+    //     chewieController.resolutions.isNotEmpty ? chewieController.resolutions.keys.first : '';
   }
 
   @override
@@ -179,8 +182,7 @@ class _CupertinoControlsState extends State<CupertinoControls>
             useRootNavigator: chewieController.useRootNavigator,
             builder: (context) => CupertinoOptionsDialog(
               options: options,
-              cancelButtonText:
-                  chewieController.optionsTranslation?.cancelButtonText,
+              cancelButtonText: chewieController.optionsTranslation?.cancelButtonText,
             ),
           );
           if (_latestValue.isPlaying) {
@@ -284,9 +286,10 @@ class _CupertinoControlsState extends State<CupertinoControls>
                           _buildSubtitleToggle(iconColor, barHeight),
                           if (chewieController.allowPlaybackSpeedChanging)
                             _buildSpeedButton(controller, iconColor, barHeight),
+                          if (chewieController.resolutions.isNotEmpty)
+                            _buildQualityButton(iconColor, barHeight),
                           if (chewieController.additionalOptions != null &&
-                              chewieController
-                                  .additionalOptions!(context).isNotEmpty)
+                              chewieController.additionalOptions!(context).isNotEmpty)
                             _buildOptionsButton(iconColor, barHeight),
                         ],
                       ),
@@ -347,10 +350,9 @@ class _CupertinoControlsState extends State<CupertinoControls>
   }
 
   Widget _buildHitArea() {
-    final bool isFinished = (_latestValue.position >= _latestValue.duration) &&
-        _latestValue.duration.inSeconds > 0;
-    final bool showPlayButton =
-        widget.showPlayButton && !_latestValue.isPlaying && !_dragging;
+    final bool isFinished =
+        (_latestValue.position >= _latestValue.duration) && _latestValue.duration.inSeconds > 0;
+    final bool showPlayButton = widget.showPlayButton && !_latestValue.isPlaying && !_dragging;
 
     return GestureDetector(
       onTap: _latestValue.isPlaying
@@ -533,6 +535,56 @@ class _CupertinoControlsState extends State<CupertinoControls>
         ),
         child: Icon(
           CupertinoIcons.goforward_15,
+          color: iconColor,
+          size: 18.0,
+        ),
+      ),
+    );
+  }
+
+  GestureDetector _buildQualityButton(
+    Color iconColor,
+    double barHeight,
+  ) {
+    return GestureDetector(
+      onTap: () async {
+        _hideTimer?.cancel();
+        final chosenQuality = await showCupertinoModalPopup<String>(
+          context: context,
+          semanticsDismissible: true,
+          useRootNavigator: chewieController.useRootNavigator,
+          builder: (context) => _QualityDialog(
+            resolutions: chewieController.resolutions.keys.toList(),
+            selected: notifier.selectedResolution,
+          ),
+        );
+
+        if (chosenQuality != null) {
+          notifier.selectedResolution = chosenQuality;
+          await chewieController.setResolution(chosenQuality);
+        }
+        if (_latestValue.isPlaying) {
+          _startHideTimer();
+        }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() {});
+            log('state setted');
+          }
+        });
+      },
+      child: Container(
+        height: barHeight,
+        color: Colors.transparent,
+        padding: const EdgeInsets.only(
+          left: 6.0,
+          right: 8.0,
+        ),
+        margin: const EdgeInsets.only(
+          right: 8.0,
+        ),
+        child: Icon(
+          Icons.high_quality_outlined,
           color: iconColor,
           size: 18.0,
         ),
@@ -729,8 +781,8 @@ class _CupertinoControlsState extends State<CupertinoControls>
   }
 
   void _playPause() {
-    final isFinished = _latestValue.position >= _latestValue.duration &&
-        _latestValue.duration.inSeconds > 0;
+    final isFinished =
+        _latestValue.position >= _latestValue.duration && _latestValue.duration.inSeconds > 0;
 
     setState(() {
       if (controller.value.isPlaying) {
@@ -757,8 +809,7 @@ class _CupertinoControlsState extends State<CupertinoControls>
   Future<void> _skipBack() async {
     _cancelAndRestartTimer();
     final beginning = Duration.zero.inMilliseconds;
-    final skip =
-        (_latestValue.position - const Duration(seconds: 15)).inMilliseconds;
+    final skip = (_latestValue.position - const Duration(seconds: 15)).inMilliseconds;
     await controller.seekTo(Duration(milliseconds: math.max(skip, beginning)));
     // Restoring the video speed to selected speed
     // A delay of 1 second is added to ensure a smooth transition of speed after reversing the video as reversing is an asynchronous function
@@ -770,8 +821,7 @@ class _CupertinoControlsState extends State<CupertinoControls>
   Future<void> _skipForward() async {
     _cancelAndRestartTimer();
     final end = _latestValue.duration.inMilliseconds;
-    final skip =
-        (_latestValue.position + const Duration(seconds: 15)).inMilliseconds;
+    final skip = (_latestValue.position + const Duration(seconds: 15)).inMilliseconds;
     await controller.seekTo(Duration(milliseconds: math.min(skip, end)));
     // Restoring the video speed to selected speed
     // A delay of 1 second is added to ensure a smooth transition of speed after forwarding the video as forwaring is an asynchronous function
@@ -848,8 +898,42 @@ class _PlaybackSpeedDialog extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  if (e == _selected)
-                    Icon(Icons.check, size: 20.0, color: selectedColor),
+                  if (e == _selected) Icon(Icons.check, size: 20.0, color: selectedColor),
+                  Text(e.toString()),
+                ],
+              ),
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
+class _QualityDialog extends StatelessWidget {
+  const _QualityDialog({
+    required List<String> resolutions,
+    required String? selected,
+  })  : _resolutions = resolutions,
+        _selected = selected;
+
+  final List<String> _resolutions;
+  final String? _selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedColor = CupertinoTheme.of(context).primaryColor;
+
+    return CupertinoActionSheet(
+      actions: _resolutions
+          .map(
+            (e) => CupertinoActionSheetAction(
+              onPressed: () {
+                Navigator.of(context).pop(e);
+              },
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (e == _selected) Icon(Icons.check, size: 20.0, color: selectedColor),
                   Text(e.toString()),
                 ],
               ),

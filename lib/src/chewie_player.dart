@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:chewie/src/chewie_progress_colors.dart';
 import 'package:chewie/src/extensions/video_player_controller_extension.dart';
@@ -86,6 +87,7 @@ class ChewieState extends State<Chewie> {
 
   @override
   Widget build(BuildContext context) {
+    log('build');
     return ChewieControllerProvider(
       controller: widget.controller,
       child: ChangeNotifierProvider<PlayerNotifier>.value(
@@ -586,6 +588,7 @@ class ChewieController extends ChangeNotifier {
   bool get isPlaying => videoPlayerController.value.isPlaying;
 
   Future<dynamic> _initialize() async {
+    if (resolutions.isNotEmpty) {}
     await videoPlayerController.setLooping(looping);
 
     if ((autoInitialize || autoPlay) && !videoPlayerController.value.isInitialized) {
@@ -665,11 +668,17 @@ class ChewieController extends ChangeNotifier {
 
     final position = await videoPlayerController.position;
     final dataSource = resolutions[resolution];
+    videoPlayerController.dispose();
 
     videoPlayerController = videoPlayerController.copyWith(dataSource: dataSource);
 
+    await videoPlayerController.initialize();
+
     await _initialize();
     await videoPlayerController.seekTo(position!);
+
+    videoPlayerController.play();
+    notifyListeners();
   }
 }
 
